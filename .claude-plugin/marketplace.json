@@ -1,0 +1,15 @@
+{
+  "name": "synth-firmware",
+  "owner": { "name": "saulofilho" },
+  "metadata": {
+    "description": "Tools for building M-VAVE FM-1 firmware on the Felucca platform.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "synth-firmware",
+      "source": "./",
+      "description": "Build an FM-1 firmware end to end: identity, sound engine, patterns, hub + web emulator, and a signed Firmware Hub release. Modeled on the COQUI firmware."
+    }
+  ]
+}
