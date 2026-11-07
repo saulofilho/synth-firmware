@@ -1,8 +1,11 @@
 {
   "name": "synth-firmware",
+  "displayName": "Synth Firmware",
   "version": "0.1.0",
   "description": "Build a firmware for the M-VAVE FM-1 (JieLi AC791N / Felucca platform), from identity to a signed Firmware Hub release. Modeled on the COQUI firmware.",
   "author": { "name": "saulofilho" },
+  "homepage": "https://github.com/saulofilho/synth-firmware",
+  "repository": "https://github.com/saulofilho/synth-firmware",
   "keywords": ["firmware", "fm-1", "m-vave", "felucca", "grimm", "jieli", "ac791n", "groovebox", "embedded", "dsp"],
   "license": "GPL-3.0-only"
 }
