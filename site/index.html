@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>synth-firmware — build firmware for the M-VAVE FM-1</title>
+<meta name="description" content="A Claude Code plugin that builds firmware for the M-VAVE FM-1 (JieLi AC791N / Felucca platform) — from identity to a signed Firmware Hub release. Modeled on the COQUÍ firmware." />
+<meta property="og:title" content="synth-firmware" />
+<meta property="og:description" content="Build firmware for the M-VAVE FM-1 — from identity to a signed Firmware Hub release. A Claude Code plugin." />
+<meta property="og:type" content="website" />
+<meta name="theme-color" content="#0b0b0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0b0b0f;
+    --bg-soft:#101017;
+    --grid:rgba(255,255,255,.035);
+    --ink:#f3f3f7;
+    --muted:#9a9aab;
+    --faint:#6b6b7b;
+    --line:rgba(255,255,255,.09);
+    --card:rgba(255,255,255,.025);
+    --pink:#ff4d9d;
+    --violet:#8a5cff;
+    --cyan:#35e0ff;
+    --mango:#ffb13c;
+    --lima:#8ef0b0;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --display:"Space Grotesk",var(--sans);
+    --maxw:1080px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  body::before{ /* graph-paper grid */
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:34px 34px;
+    mask-image:radial-gradient(circle at 50% 38%,#000 0%,#000 55%,transparent 100%);
+    -webkit-mask-image:radial-gradient(circle at 50% 38%,#000 0%,#000 55%,transparent 100%);
+  }
+  .wrap{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  a{color:inherit;text-decoration:none}
+
+  /* top bar */
+  header{position:relative;z-index:3;max-width:var(--maxw);margin:0 auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{font-family:var(--mono);font-size:13px;letter-spacing:.02em;color:var(--muted)}
+  .brand b{color:var(--ink);font-weight:500}
+  nav{display:flex;gap:26px;font-size:14px;color:var(--muted);font-weight:500}
+  nav a:hover{color:var(--ink)}
+  @media(max-width:640px){nav{display:none}}
+
+  /* hero */
+  .hero{position:relative;z-index:1;text-align:center;padding:52px 24px 30px;min-height:calc(100vh - 66px);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .anno{font-family:var(--mono);font-size:14px;color:var(--faint);height:20px;margin-bottom:10px}
+  .anno .tok{color:var(--lima)}
+  .anno .k{color:#7aa2ff}
+  #annoText{opacity:0;transition:opacity .35s ease}
+  #annoText.show{opacity:1}
+  .wordmark{
+    font-family:var(--display);font-weight:700;letter-spacing:-.03em;line-height:.92;
+    font-size:clamp(56px,13.5vw,164px);margin:0;
+    background:linear-gradient(104deg,var(--pink) 0%,var(--violet) 46%,var(--cyan) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 40px rgba(138,92,255,.25));
+  }
+  .tagline{max-width:620px;margin:22px auto 0;color:var(--muted);font-size:clamp(16px,2.1vw,20px)}
+  .tagline b{color:var(--ink);font-weight:600}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:28px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-weight:600;font-size:15px;border:1px solid transparent;transition:transform .12s ease,box-shadow .2s ease}
+  .pill:hover{transform:translateY(-2px)}
+  .pill.primary{background:linear-gradient(104deg,var(--pink),var(--violet));color:#fff;box-shadow:0 8px 30px rgba(255,77,157,.28)}
+  .pill.ghost{background:rgba(255,255,255,.04);border-color:var(--line);color:var(--ink)}
+  .pill svg{width:16px;height:16px}
+
+  /* install copy bar */
+  .install{width:100%;max-width:640px;margin:34px auto 0;display:flex;align-items:center;gap:10px;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px 16px}
+  .install code{font-family:var(--mono);font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:auto;flex:1;min-width:0;text-align:left;scrollbar-width:none}
+  .install code::-webkit-scrollbar{display:none}
+  .install code .dim{color:var(--faint)}
+  .copy{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .copy:hover{color:var(--ink);border-color:rgba(255,255,255,.2)}
+  .copy.done{color:var(--lima);border-color:rgba(142,240,176,.4)}
+
+  /* sections */
+  section{position:relative;z-index:1;padding:68px 0}
+  .eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px}
+  .h2{font-family:var(--display);font-weight:600;font-size:clamp(26px,4vw,38px);letter-spacing:-.02em;margin:0 0 8px}
+  .lead{color:var(--muted);max-width:620px;margin:0 0 34px;font-size:16.5px}
+
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:720px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 22px 24px;transition:border-color .2s ease,background .2s ease}
+  .card:hover{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.04)}
+  .card .tag{font-family:var(--mono);font-size:12px;color:var(--cyan);margin:0 0 10px}
+  .card h3{margin:0 0 8px;font-size:18.5px;font-weight:600;font-family:var(--display);letter-spacing:-.01em}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .card code{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:rgba(255,255,255,.05);padding:1px 6px;border-radius:5px}
+
+  /* phases */
+  .phases{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  @media(max-width:860px){.phases{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.phases{grid-template-columns:1fr}}
+  .phase{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 14px}
+  .phase .n{font-family:var(--mono);font-size:12px;color:var(--mango);margin-bottom:8px}
+  .phase b{display:block;font-size:14.5px;font-weight:600;margin-bottom:4px;font-family:var(--display)}
+  .phase span{font-size:12.5px;color:var(--faint);line-height:1.4}
+
+  /* code rules block */
+  .codeblock{background:#07070b;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-family:var(--mono);font-size:13.5px}
+  .codeblock .bar{display:flex;align-items:center;gap:7px;padding:12px 16px;border-bottom:1px solid var(--line);color:var(--faint);font-size:12px}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .codeblock pre{margin:0;padding:18px 20px;overflow:auto;line-height:1.7;color:#cfd2e6}
+  .c-com{color:#5c6a7a}.c-key{color:#ff7bb8}.c-ok{color:var(--lima)}.c-val{color:var(--cyan)}
+
+  /* coqui callout */
+  .callout{display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:center;background:linear-gradient(120deg,rgba(255,45,138,.10),rgba(53,224,255,.07));border:1px solid var(--line);border-radius:20px;padding:30px}
+  @media(max-width:720px){.callout{grid-template-columns:1fr;padding:24px}}
+  .callout h3{font-family:var(--display);font-size:22px;margin:0 0 8px;font-weight:600}
+  .callout p{margin:0 0 16px;color:var(--muted);font-size:15px}
+  .swatches{display:flex;gap:10px;flex-wrap:wrap}
+  .sw{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:center}
+  .sw i{display:block;width:46px;height:46px;border-radius:10px;margin-bottom:6px;border:1px solid rgba(255,255,255,.12)}
+
+  footer{position:relative;z-index:1;border-top:1px solid var(--line);margin-top:30px;padding:40px 0 60px}
+  .foot{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:flex-start}
+  .foot .muted{color:var(--faint);font-size:13px;font-family:var(--mono);max-width:360px;line-height:1.7}
+  .foot nav{display:flex;flex-direction:column;gap:8px}
+  .foot nav a{color:var(--muted);font-size:14px}
+  .foot nav a:hover{color:var(--ink)}
+  .disc{margin-top:26px;color:var(--faint);font-size:12.5px;max-width:720px;font-family:var(--mono);line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">saulofilho / <b>synth-firmware</b></div>
+  <nav>
+    <a href="#inside">Inside</a>
+    <a href="#phases">Phases</a>
+    <a href="#rules">Chip rules</a>
+    <a href="https://github.com/saulofilho/synth-firmware">GitHub ↗</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="anno">// <span id="annoText" class="show"><span class="k">target</span>: <span class="tok">JieLi AC791N</span></span></div>
+    <h1 class="wordmark">synth&#8203;firmware</h1>
+    <p class="tagline">A Claude Code plugin that builds firmware for the <b>M-VAVE FM-1</b> — from identity to a signed Firmware Hub release. <b>It designs the firmware and writes the code for it.</b></p>
+    <div class="cta">
+      <a class="pill primary" href="#install">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
+        Install
+      </a>
+      <a class="pill ghost" href="https://github.com/saulofilho/synth-firmware">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.555-1.11-4.555-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>
+        GitHub
+      </a>
+      <a class="pill ghost" href="https://github.com/saulofilho/coqui-fm1">Built with it: COQUÍ ↗</a>
+    </div>
+
+    <div class="install" id="install">
+      <code><span class="dim">/plugin marketplace add</span> saulofilho/synth-firmware</code>
+      <button class="copy" id="copyBtn" type="button" aria-label="Copy install command">Copy</button>
+    </div>
+  </section>
+
+  <section id="inside" class="wrap">
+    <p class="eyebrow">What's in the box</p>
+    <h2 class="h2">Four pieces, one method</h2>
+    <p class="lead">The plugin packages the way COQUÍ was built, so the next firmware reuses the phases, the chip rules, and the publishing flow.</p>
+    <div class="cards">
+      <div class="card">
+        <p class="tag">skill · auto-loads</p>
+        <h3>The playbook</h3>
+        <p>The phase model, the AC791N rules, the toolchain, build/test/install and the Firmware Hub flow. Loads on its own when a task mentions the FM-1.</p>
+      </div>
+      <div class="card">
+        <p class="tag">agent · delegate</p>
+        <h3>firmware-builder</h3>
+        <p>Hand it a phase or an engine — <code>add a cumbia groove</code>. It respects the rules, builds, runs host tests, and never pushes or emails on its own.</p>
+      </div>
+      <div class="card">
+        <p class="tag">commands · /</p>
+        <h3>Four slash commands</h3>
+        <p><code>/firmware-new</code>, <code>/firmware-phase</code>, <code>/firmware-check</code>, <code>/firmware-release</code> — scaffold, advance a phase, lint the chip rules, cut a release.</p>
+      </div>
+      <div class="card">
+        <p class="tag">hook · on every edit</p>
+        <h3>Chip-rule lint</h3>
+        <p>After an edit to firmware C, it flags <code>float</code>/<code>double</code>, 64-bit division and ROM-range constants early. Advisory — the build is the authority.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="phases" class="wrap">
+    <p class="eyebrow">The build, in order</p>
+    <h2 class="h2">Seven phases, no skipping</h2>
+    <p class="lead">Each phase assumes the last one builds and the host tests pass.</p>
+    <div class="phases">
+      <div class="phase"><div class="n">0</div><b>Environment</b><span>Toolchain + SDK; base compiles; tests green</span></div>
+      <div class="phase"><div class="n">1</div><b>Identity</b><span>Name, free FM-1_9NN id, magics, boot, palette</span></div>
+      <div class="phase"><div class="n">2</div><b>Engine</b><span>The sound engine; cost measured per voice</span></div>
+      <div class="phase"><div class="n">3</div><b>Patterns</b><span>Groove system + web hub + WASM emulator</span></div>
+      <div class="phase"><div class="n">4</div><b>Melodic</b><span>ARP lines and patches over held chords</span></div>
+      <div class="phase"><div class="n">5</div><b>Mood</b><span>Generative, ambience, idle screen</span></div>
+      <div class="phase"><div class="n">6</div><b>Release</b><span>Signed .fwsc, device test, Hub submission</span></div>
+    </div>
+  </section>
+
+  <section id="rules" class="wrap">
+    <p class="eyebrow">It respects the chip</p>
+    <h2 class="h2">The rules the AC791N enforces</h2>
+    <p class="lead">No FPU, a tight audio budget, and a pool that's nearly full. The plugin writes code that respects them from the start.</p>
+    <div class="codeblock">
+      <div class="bar"><span class="dot" style="background:#ff5f56"></span><span class="dot" style="background:#ffbd2e"></span><span class="dot" style="background:#27c93f"></span>&nbsp;&nbsp;chip-rules.md</div>
+<pre><span class="c-com"># integers only — no FPU, no soft-float</span>
+<span class="c-key">forbid</span>  float, double            <span class="c-com">// → link fails</span>
+<span class="c-key">use</span>     Q15 levels · Q12 gains · 32-bit phase
+<span class="c-key">forbid</span>  64-bit / and %           <span class="c-com">// no __udivdi3</span>
+
+<span class="c-com"># the audio interrupt</span>
+<span class="c-key">budget</span>  app_audio() 256 frames / 5.8ms
+<span class="c-key">target</span>  &lt; <span class="c-val">2.9ms</span>   <span class="c-ok">✓ off costs nothing</span>
+<span class="c-key">never</span>   flash · screen · wait inside audio
+
+<span class="c-com"># boundaries</span>
+<span class="c-key">hal</span>     hardware registers only through hal/
+<span class="c-key">accept</span>  both flash ids 0x856014 · 0xB36014</pre>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="callout">
+      <div>
+        <p class="eyebrow">Reference implementation</p>
+        <h3>Modeled on COQUÍ 🐸</h3>
+        <p>A Latin &amp; Caribbean groovebox forked from GR!MM 2.0.2 — 14 grooves, tumbao and montuno lines, generative parts in the clave. Built with this method, tested on a real FM-1, and shipped to the Firmware Hub.</p>
+        <div class="cta" style="margin-top:4px">
+          <a class="pill ghost" href="https://saulofilho.github.io/coqui-fm1/">Hub + web emulator ↗</a>
+          <a class="pill ghost" href="https://github.com/saulofilho/coqui-fm1">Source ↗</a>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="sw"><i style="background:#ff2d8a"></i>ROSA</div>
+        <div class="sw"><i style="background:#ffb13c"></i>MANGO</div>
+        <div class="sw"><i style="background:#37b7ff"></i>MAR</div>
+        <div class="sw"><i style="background:#8ef0b0"></i>LIMA</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div class="foot">
+    <div>
+      <div class="brand" style="font-size:15px;margin-bottom:12px">saulofilho / <b>synth-firmware</b></div>
+      <p class="muted">A Claude Code plugin for building M-VAVE FM-1 firmware on the Felucca platform. GPL-3.0-only, matching the GR!MM / Felucca lineage it builds on.</p>
+    </div>
+    <nav>
+      <a href="https://github.com/saulofilho/synth-firmware">Repository ↗</a>
+      <a href="https://github.com/saulofilho/coqui-fm1">COQUÍ (example) ↗</a>
+      <a href="https://thefirmwarehub.com/">FM-1 Firmware Hub ↗</a>
+      <a href="https://code.claude.com/docs/en/plugins">Claude Code plugins ↗</a>
+    </nav>
+  </div>
+  <p class="disc">Honest scope: the plugin encodes the FM-1 / Felucca <em>method</em> at high fidelity — phases, chip rules, toolchain, release. It does not generate the DSP for a new sound engine; that stays real engineering. It accelerates the skeleton, keeps the constraints, and gets the release right.</p>
+</footer>
+
+<script>
+  // cycling code annotation above the wordmark
+  (function(){
+    var el = document.getElementById('annoText');
+    if(!el) return;
+    var lines = [
+      ['target','JieLi AC791N'],
+      ['rule','no float · Q15 only'],
+      ['budget','app_audio() < 2.9ms'],
+      ['fork','Felucca → GR!MM → you'],
+      ['ship','coqui-1.0.fwsc  signed ✓'],
+      ['hub','thefirmwarehub.com']
+    ];
+    var i = 0;
+    function render(){
+      var l = lines[i];
+      el.innerHTML = '<span class="k">'+l[0]+'</span>: <span class="tok">'+l[1]+'</span>';
+    }
+    render();
+    setInterval(function(){
+      el.classList.remove('show');
+      setTimeout(function(){ i=(i+1)%lines.length; render(); el.classList.add('show'); }, 360);
+    }, 2600);
+  })();
+
+  // copy install command
+  (function(){
+    var btn = document.getElementById('copyBtn');
+    if(!btn) return;
+    var cmd = '/plugin marketplace add saulofilho/synth-firmware';
+    btn.addEventListener('click', function(){
+      var done = function(){ btn.textContent='Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); },1600); };
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(cmd).then(done, fallback); }
+        else { fallback(); }
+      }catch(e){ fallback(); }
+      function fallback(){
+        try{ var t=document.createElement('textarea'); t.value=cmd; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); done(); }
+        catch(e2){ /* give up quietly */ }
+      }
+    });
+  })();
+</script>
+</body>
+</html>
