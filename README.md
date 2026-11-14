@@ -49,3 +49,5 @@ skeleton, keeps the constraints, and gets the release right.
 ## Licence
 
 GPL-3.0-only, matching the GR!MM / Felucca lineage it builds on.
+
+You can also try Synth Firmware in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
