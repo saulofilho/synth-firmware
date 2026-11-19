@@ -92,9 +92,9 @@
 
   /* dark numbers */
   .dark{background:var(--ink);color:var(--pink);padding-bottom:120px}
-  .nums{display:grid;grid-template-columns:120px repeat(5,1fr);gap:22px;align-items:end;padding-top:110px}
+  .nums{display:grid;grid-template-columns:120px repeat(5,1fr);gap:22px clamp(16px,2.4vw,36px);align-items:end;padding-top:110px}
   .nums .lbl{align-self:start;padding-top:6px}
-  .num svg{display:block;width:100%;height:auto}
+  .num svg{display:block;width:68%;height:auto}
   .num span{display:block;font-size:13px;margin-top:10px}
   .budget{padding-top:90px}
   .budget-row{display:grid;grid-template-columns:repeat(3,auto) 1fr;gap:clamp(10px,2vw,30px);align-items:end;margin-top:14px}
@@ -225,7 +225,7 @@
   <section class="about" data-hbg="pink">
     <div class="sec-head"><span class="lbl">About</span></div>
     <div class="about-grid">
-      <h2><span class="type">One method for people who build sound</span><br><span class="type">and the chip that runs it</span></h2>
+      <h2><span class="type">One method for the sound</span><br><span class="type">and the chip that runs it</span></h2>
       <p>The plugin packages the way COQUÍ was built, so the next firmware reuses the phases, the chip rules, and the publishing flow.</p>
       <p>Hand it an idea — a groove, an engine, a mood — and it moves phase by phase: identity, engine, patterns, melodic parts, ambience, release. Each phase assumes the last one builds and the host tests pass.</p>
     </div>
@@ -447,13 +447,13 @@
   // ambient glitch: a few cells slip one step, then return
   setInterval(function(){
     if(!motion || document.hidden) return;
-    for(var k=0;k<3;k++){
+    for(var k=0;k<2;k++){
       var r = heroRects[(Math.random()*heroRects.length)|0];
       var d = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1]][(Math.random()*6)|0];
       nudge(r, d[0], d[1]);
       (function(rr){ setTimeout(function(){ rr.style.transform=''; }, 900 + Math.random()*900); })(r);
     }
-  }, 420);
+  }, 650);
   // pointer pushes cells away
   hero.addEventListener('pointermove', function(e){
     if(!motion) return;
