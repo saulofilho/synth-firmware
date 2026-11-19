@@ -57,7 +57,7 @@
   .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
   .hero-top .place{font-size:clamp(20px,2.3vw,30px);line-height:1.08;font-weight:500;letter-spacing:-.01em}
   .hero-top .ver{font-size:13px;font-weight:500;text-align:right}
-  .bigpix{display:block;width:100%;height:auto;margin:clamp(30px,6vw,70px) 0 14px;overflow:visible;touch-action:pan-y}
+  .bigpix{display:block;width:100%;height:min(34vh,24vw);min-height:120px;margin:clamp(30px,6vw,70px) 0 14px;overflow:visible;touch-action:pan-y}
   .bigpix rect{transition:transform .5s cubic-bezier(.2,.9,.2,1)}
   .statement{margin-top:auto;padding-top:80px;display:grid;grid-template-columns:1fr 1fr;gap:0 40px;font-size:clamp(17px,2vw,27px);line-height:1.12;letter-spacing:-.015em;font-weight:500}
   .statement .col{grid-column:2;display:grid;grid-template-columns:1fr auto;gap:0 30px;text-align:right}
@@ -440,6 +440,7 @@
   /* ---------- hero: giant FM-1 that breaks apart ---------- */
   var hero = document.getElementById('heroPix');
   var heroRects = pixText(hero, 'FM-1');
+  hero.setAttribute('preserveAspectRatio', 'none');
   heroRects.forEach(function(r){ r._x = +r.getAttribute('x'); r._y = +r.getAttribute('y'); });
   function resetHero(){ heroRects.forEach(function(r){ r.style.transform=''; }); }
   function nudge(r, dx, dy){ r.style.transform = 'translate('+dx+'px,'+dy+'px)'; }
